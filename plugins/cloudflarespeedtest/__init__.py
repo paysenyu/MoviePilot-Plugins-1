@@ -370,7 +370,7 @@ class CloudflareSpeedTest(_PluginBase):
                 if SystemUtils.is_windows():
                     self.__get_windows_cloudflarest(download_url, proxies)
                 else:
-                    os.system(f'wget -P {self._cf_path} https://ghproxy.com/{download_url}')
+                    os.system(f'wget -P {self._cf_path} https://ghfast.top/{download_url}')
 
         # 判断是否下载好安装包
         if Path(f'{self._cf_path}/{cf_file_name}').exists():
@@ -435,22 +435,39 @@ class CloudflareSpeedTest(_PluginBase):
                 for chunk in response.iter_content(chunk_size=8192):
                     file.write(chunk)
 
-    @staticmethod
-    def __get_release_version():
-        """
-        获取CloudflareSpeedTest最新版本
-        """
-        version_res = RequestUtils().get_res(
-            "https://api.github.com/repos/XIU2/CloudflareSpeedTest/releases/latest")
-        if not version_res:
-            version_res = RequestUtils(proxies=settings.PROXY).get_res(
-                "https://api.github.com/repos/XIU2/CloudflareSpeedTest/releases/latest")
-        if version_res:
+@staticmethod
+def __get_release_version():
+    """
+    获取CloudflareSpeedTest最新版本，网络错误时自动尝试ghproxy代理
+    """
+    try:
+        # 基础配置： headers和代理
+        headers = settings.GITHUB_HEADERS if hasattr(settings, 'GITHUB_HEADERS') else {}
+        proxies = settings.PROXY if hasattr(settings, 'PROXY') else None
+        
+        # 原始GitHub API地址
+        github_url = "https://api.github.com/repos/XIU2/CloudflareSpeedTest/releases/latest"
+        # 代理地址（通过ghproxy转发）
+        proxy_url = f"https://ghfast.top/{github_url}"
+        
+        # 1. 尝试直接请求GitHub API
+        version_res = RequestUtils(headers=headers, proxies=proxies).get_res(github_url)
+        
+        # 2. 如果直接请求失败（无响应或状态码非200），尝试使用ghproxy代理
+        if not version_res or version_res.status_code != 200:
+            logger.warning("直接请求GitHub API失败，尝试使用ghproxy代理重试...")
+            version_res = RequestUtils(headers=headers, proxies=proxies).get_res(proxy_url)
+        
+        # 3. 检查最终请求结果
+        if version_res and version_res.status_code == 200:
             ver_json = version_res.json()
-            version = f"{ver_json['tag_name']}"
-            return version
+            return ver_json.get('tag_name', '')
         else:
+            logger.error(f"获取版本失败，最终状态码: {version_res.status_code if version_res else '无响应'}")
             return None
+    except Exception as e:
+        logger.error(f"获取版本时出错: {str(e)}")
+        return None
 
     def __update_config(self):
         """
