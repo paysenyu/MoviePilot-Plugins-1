@@ -32,7 +32,7 @@ class CloudflareSpeedTest(_PluginBase):
     # 插件图标
     plugin_icon = "cloudflare.jpg"
     # 插件版本
-    plugin_version = "1.4.2"
+    plugin_version = "1.4.3"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -440,8 +440,8 @@ class CloudflareSpeedTest(_PluginBase):
         """
         获取CloudflareSpeedTest最新版本
         """
-        version_res = RequestUtils().get_res(
-            "https://api.github.com/repos/XIU2/CloudflareSpeedTest/releases/latest")
+        version_res = RequestUtils(proxies=settings.PROXY, headers=settings.GITHUB_HEADERS).get_res(
+        f"https://api.github.com/repos/XIU2/CloudflareSpeedTest/releases/latest")
         if not version_res:
             version_res = RequestUtils(proxies=settings.PROXY).get_res(
                 "https://api.github.com/repos/XIU2/CloudflareSpeedTest/releases/latest")
