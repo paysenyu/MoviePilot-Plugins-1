@@ -273,9 +273,6 @@ class CloudflareSpeedTest(_PluginBase):
             logger.info(f"获取到自定义hosts插件中ip {max_ips[0]} 出现次数最多，已自动校正优选ip")
 
     def __check_environment(self):
-    """
-    检查环境，确保CloudflareSpeedTest可执行文件存在
-    """
     install_flag = False
     # 获取CloudflareSpeedTest最新版本
     release_version = self.__get_release_version()
