@@ -436,7 +436,7 @@ class CloudflareSpeedTest(_PluginBase):
                     file.write(chunk)
 
     @staticmethod
-        def __get_release_version():
+    def __get_release_version():
         try:
             # 获取所有发布的版本列表
             response = RequestUtils(
@@ -445,15 +445,20 @@ class CloudflareSpeedTest(_PluginBase):
             ).get_res("https://api.github.com/repos/XIU2/CloudflareSpeedTest/releases/latest")
             if response:
                 releases = [release['tag_name'] for release in response.json()]
-        if not version_res:
-            version_res = RequestUtils(proxies=settings.PROXY).get_res(
-                "https://api.github.com/repos/XIU2/CloudflareSpeedTest/releases/latest")
-        if version_res:
-            ver_json = version_res.json()
-            version = f"{ver_json['tag_name']}"
-            return version
-        else:
-            return None
+                v2_releases = [tag for tag in releases if re.match(r"^v2\.", tag)]
+                if not v2_releases:
+                    logger.warn("获取v2后端最新版本版本出错！")
+                else:
+                    # 找到最新的v2版本
+                    latest_v2 = sorted(v2_releases, key=lambda s: list(map(int, re.findall(r'\d+', s))))[-1]
+                    logger.info(f"获取到后端最新版本：{latest_v2}")
+                    return latest_v2
+            else:
+                logger.error("无法获取后端版本信息，请检查网络连接或GitHub API请求。")
+        except Exception as err:
+            logger.error(f"获取后端最新版本失败：{str(err)}")
+        return None
+
         
     def __update_config(self):
         """
