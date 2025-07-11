@@ -32,7 +32,7 @@ class CloudflareSpeedTest(_PluginBase):
     # 插件图标
     plugin_icon = "cloudflare.jpg"
     # 插件版本
-    plugin_version = "1.4.3"
+    plugin_version = "1.4.1"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -62,7 +62,7 @@ class CloudflareSpeedTest(_PluginBase):
     _cf_ipv6 = None
     _result_file = None
     _release_prefix = 'https://github.com/XIU2/CloudflareSpeedTest/releases/download'
-    _binary_name = 'CloudflareST'
+    _binary_name = 'csft'
 
     def init_plugin(self, config: dict = None):
         # 停止现有任务
@@ -156,7 +156,7 @@ class CloudflareSpeedTest(_PluginBase):
             logger.info("正在进行CLoudflare CDN优选，请耐心等待")
             # 执行优选命令，-dd不测速
             if SystemUtils.is_windows():
-                cf_command = f'cd \"{self._cf_path}\" && CloudflareST {self._additional_args} -o \"{self._result_file}\"' + (
+                cf_command = f'cd \"{self._cf_path}\" && csft {self._additional_args} -o \"{self._result_file}\"' + (
                     f' -f \"{self._cf_ipv4}\"' if self._ipv4 else '') + (
                                  f' -f \"{self._cf_ipv6}\"' if self._ipv6 else '')
             else:
@@ -173,7 +173,7 @@ class CloudflareSpeedTest(_PluginBase):
                     time.sleep(600)
                 # 如果没有在120秒内完成任务，那么杀死该进程
                 if process.poll() is None:
-                    os.system('taskkill /F /IM CloudflareST.exe')
+                    os.system('taskkill /F /IM csft.exe')
             else:
                 os.system(cf_command)
 
@@ -296,7 +296,7 @@ class CloudflareSpeedTest(_PluginBase):
         # 获取CloudflareSpeedTest最新版本
         release_version = self.__get_release_version()
         if not release_version:
-            # 如果升级失败但是有可执行文件CloudflareST，则可继续运行，反之停止
+            # 如果升级失败但是有可执行文件csft，则可继续运行，反之停止
             if Path(f'{self._cf_path}/{self._binary_name}').exists():
                 logger.warn(f"获取CloudflareSpeedTest版本失败，存在可执行版本，继续运行")
                 return True, None
@@ -319,7 +319,7 @@ class CloudflareSpeedTest(_PluginBase):
                 and release_version == self._version \
                 and not Path(
             f'{self._cf_path}/{self._binary_name}').exists() \
-                and not Path(f'{self._cf_path}/CloudflareST.exe').exists():
+                and not Path(f'{self._cf_path}/csft.exe').exists():
             logger.warn(f"未检测到CloudflareSpeedTest本地版本，重新安装")
             install_flag = True
 
@@ -330,7 +330,7 @@ class CloudflareSpeedTest(_PluginBase):
         # 检查环境、安装
         if SystemUtils.is_windows():
             # windows
-            cf_file_name = 'CloudflareST_windows_amd64.zip'
+            cf_file_name = 'csft_windows_amd64.zip'
             download_url = f'{self._release_prefix}/{release_version}/{cf_file_name}'
             return self.__os_install(download_url, cf_file_name, release_version,
                                      f"ditto -V -x -k --sequesterRsrc {self._cf_path}/{cf_file_name} {self._cf_path}")
@@ -338,7 +338,7 @@ class CloudflareSpeedTest(_PluginBase):
             # mac
             uname = SystemUtils.execute('uname -m')
             arch = 'amd64' if uname == 'x86_64' else 'arm64'
-            cf_file_name = f'CloudflareST_darwin_{arch}.zip'
+            cf_file_name = f'csft_darwin_{arch}.zip'
             download_url = f'{self._release_prefix}/{release_version}/{cf_file_name}'
             return self.__os_install(download_url, cf_file_name, release_version,
                                      f"ditto -V -x -k --sequesterRsrc {self._cf_path}/{cf_file_name} {self._cf_path}")
@@ -346,7 +346,7 @@ class CloudflareSpeedTest(_PluginBase):
             # docker
             uname = SystemUtils.execute('uname -m')
             arch = 'amd64' if uname == 'x86_64' else 'arm64'
-            cf_file_name = f'CloudflareST_linux_{arch}.tar.gz'
+            cf_file_name = f'csft_linux_{arch}.tar.gz'
             download_url = f'{self._release_prefix}/{release_version}/{cf_file_name}'
             return self.__os_install(download_url, cf_file_name, release_version,
                                      f"tar -zxf {self._cf_path}/{cf_file_name} -C {self._cf_path}")
@@ -362,15 +362,15 @@ class CloudflareSpeedTest(_PluginBase):
             https_proxy = proxies.get("https") if proxies and proxies.get("https") else None
             if https_proxy:
                 if SystemUtils.is_windows():
-                    self.__get_windows_cloudflarest(download_url, proxies)
+                    self.__get_windows_csft(download_url, proxies)
                 else:
                     os.system(
                         f'wget -P {self._cf_path} --no-check-certificate -e use_proxy=yes -e https_proxy={https_proxy} {download_url}')
             else:
                 if SystemUtils.is_windows():
-                    self.__get_windows_cloudflarest(download_url, proxies)
+                    self.__get_windows_csft(download_url, proxies)
                 else:
-                    os.system(f'wget -P {self._cf_path} https://ghfast.top/{download_url}')
+                    os.system(f'wget -P {self._cf_path} https://ghproxy.com/{download_url}')
 
         # 判断是否下载好安装包
         if Path(f'{self._cf_path}/{cf_file_name}').exists():
@@ -379,7 +379,7 @@ class CloudflareSpeedTest(_PluginBase):
                     with zipfile.ZipFile(f'{self._cf_path}/{cf_file_name}', 'r') as zip_ref:
                         # 解压ZIP文件中的所有文件到指定目录
                         zip_ref.extractall(self._cf_path)
-                    if Path(f'{self._cf_path}\\CloudflareST.exe').exists():
+                    if Path(f'{self._cf_path}\\csft.exe').exists():
                         logger.info(f"CloudflareSpeedTest安装成功，当前版本：{release_version}")
                         return True, release_version
                     else:
@@ -398,9 +398,9 @@ class CloudflareSpeedTest(_PluginBase):
                     os.removedirs(self._cf_path)
                     return False, None
             except Exception as err:
-                # 如果升级失败但是有可执行文件CloudflareST，则可继续运行，反之停止
+                # 如果升级失败但是有可执行文件csft，则可继续运行，反之停止
                 if Path(f'{self._cf_path}/{self._binary_name}').exists() or \
-                        Path(f'{self._cf_path}\\CloudflareST.exe').exists():
+                        Path(f'{self._cf_path}\\csft.exe').exists():
                     logger.error(f"CloudflareSpeedTest安装失败：{str(err)}，继续使用现版本运行")
                     return True, None
                 else:
@@ -411,9 +411,9 @@ class CloudflareSpeedTest(_PluginBase):
                         os.removedirs(self._cf_path)
                     return False, None
         else:
-            # 如果升级失败但是有可执行文件CloudflareST，则可继续运行，反之停止
+            # 如果升级失败但是有可执行文件csft，则可继续运行，反之停止
             if Path(f'{self._cf_path}/{self._binary_name}').exists() or \
-                    Path(f'{self._cf_path}\\CloudflareST.exe').exists():
+                    Path(f'{self._cf_path}\\csft.exe').exists():
                 logger.warn(f"CloudflareSpeedTest安装失败，存在可执行版本，继续运行")
                 return True, None
             else:
@@ -424,14 +424,14 @@ class CloudflareSpeedTest(_PluginBase):
                     os.removedirs(self._cf_path)
                 return False, None
 
-    def __get_windows_cloudflarest(self, download_url, proxies):
+    def __get_windows_csft(self, download_url, proxies):
         response = Response()
         try:
             response = requests.get(download_url, stream=True, proxies=proxies if proxies else None)
         except requests.exceptions.RequestException as e:
             logger.error(f"CloudflareSpeedTest下载失败：{str(e)}")
         if response.status_code == 200:
-            with open(f'{self._cf_path}\\CloudflareST_windows_amd64.zip', 'wb') as file:
+            with open(f'{self._cf_path}\\csft_windows_amd64.zip', 'wb') as file:
                 for chunk in response.iter_content(chunk_size=8192):
                     file.write(chunk)
 
@@ -440,8 +440,8 @@ class CloudflareSpeedTest(_PluginBase):
         """
         获取CloudflareSpeedTest最新版本
         """
-        version_res = RequestUtils(proxies=settings.PROXY, headers=settings.GITHUB_HEADERS).get_res(
-        f"https://api.github.com/repos/XIU2/CloudflareSpeedTest/releases/latest")
+        version_res = RequestUtils().get_res(
+            "https://api.github.com/repos/XIU2/CloudflareSpeedTest/releases/latest")
         if not version_res:
             version_res = RequestUtils(proxies=settings.PROXY).get_res(
                 "https://api.github.com/repos/XIU2/CloudflareSpeedTest/releases/latest")
