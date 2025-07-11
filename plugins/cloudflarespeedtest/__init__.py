@@ -273,87 +273,88 @@ class CloudflareSpeedTest(_PluginBase):
             logger.info(f"获取到自定义hosts插件中ip {max_ips[0]} 出现次数最多，已自动校正优选ip")
 
     def __check_environment(self):
-    install_flag = False
-    # 获取CloudflareSpeedTest最新版本
-    release_version = self.__get_release_version()
-    if not release_version:
-        # 如果升级失败但是有可执行文件cfst，则可继续运行，反之停止
-        if Path(f'{self._cf_path}/{self._binary_name}').exists():
-            logger.warn(f"获取CloudflareSpeedTest版本失败，存在可执行版本，继续运行")
-            return True, None
-        else:
-            # 获取不到版本时，强制设置为默认版本
-            release_version = "v2.3.2"
-            self._version = release_version
-            logger.error(f"获取CloudflareSpeedTest版本失败，使用默认版本{release_version}，开始安装")
+    
+        install_flag = False
+        # 获取CloudflareSpeedTest最新版本
+        release_version = self.__get_release_version()
+        if not release_version:
+            # 如果升级失败但是有可执行文件cfst，则可继续运行，反之停止
+            if Path(f'{self._cf_path}/{self._binary_name}').exists():
+                logger.warn(f"获取CloudflareSpeedTest版本失败，存在可执行版本，继续运行")
+                return True, None
+            else:
+                # 获取不到版本时，强制设置为默认版本
+                release_version = "v2.3.2"
+                self._version = release_version
+                logger.error(f"获取CloudflareSpeedTest版本失败，使用默认版本{release_version}，开始安装")
+                install_flag = True
+    
+        # 有更新
+        if not install_flag and release_version != self._version:
+            logger.info(f"检测到CloudflareSpeedTest有版本[{release_version}]更新，开始安装")
             install_flag = True
-
-    # 有更新
-    if not install_flag and release_version != self._version:
-        logger.info(f"检测到CloudflareSpeedTest有版本[{release_version}]更新，开始安装")
-        install_flag = True
-
-    # 重装后数据库有版本数据，但是本地没有则重装
-    if not install_flag \
-            and release_version == self._version \
-            and not Path(f'{self._cf_path}/{self._binary_name}').exists() \
-            and not Path(f'{self._cf_path}/cfst.exe').exists():
-        logger.warn(f"未检测到CloudflareSpeedTest本地版本，重新安装")
-        install_flag = True
-
-    if not install_flag:
-        logger.info(f"CloudflareSpeedTest无新版本，存在可执行版本，继续运行")
-        return True, None
-
-    # 检查环境、安装
-    if SystemUtils.is_windows():
-        # windows
-        cf_file_name = 'cfst_windows_amd64.zip'
-        download_url = f'{self._release_prefix}/{release_version}/{cf_file_name}'
-        return self.__os_install(download_url, cf_file_name, release_version,
-                                 f"ditto -V -x -k --sequesterRsrc {self._cf_path}/{cf_file_name} {self._cf_path}")
-    elif SystemUtils.is_macos():
-        # mac
-        uname = SystemUtils.execute('uname -m')
-        arch = 'amd64' if uname == 'x86_64' else 'arm64'
-        cf_file_name = f'cfst_darwin_{arch}.zip'
-        download_url = f'{self._release_prefix}/{release_version}/{cf_file_name}'
-        return self.__os_install(download_url, cf_file_name, release_version,
-                                 f"ditto -V -x -k --sequesterRsrc {self._cf_path}/{cf_file_name} {self._cf_path}")
-    else:
-        # docker
-        uname = SystemUtils.execute('uname -m')
-        arch = 'amd64' if uname == 'x86_64' else 'arm64'
-        cf_file_name = f'cfst_linux_{arch}.tar.gz'
-        download_url = f'{self._release_prefix}/{release_version}/{cf_file_name}'
-        return self.__os_install(download_url, cf_file_name, release_version,
-                                 f"tar -zxf {self._cf_path}/{cf_file_name} -C {self._cf_path}")
-
-def __os_install(self, download_url, cf_file_name, release_version, unzip_command):
-    """
-    macos/docker安装cloudflare
-    """
-    # 手动下载安装包后，无需在此下载
-    if not Path(f'{self._cf_path}/{cf_file_name}').exists():
-        # 首次下载或下载新版压缩包
-        proxies = settings.PROXY
-        https_proxy = proxies.get("https") if proxies and proxies.get("https") else None
-        if https_proxy:
-            if SystemUtils.is_windows():
-                self.__get_windows_cfst(download_url, proxies)
-            else:
-                os.system(
-                    f'wget -P {self._cf_path} --no-check-certificate -e use_proxy=yes -e https_proxy={https_proxy} {download_url}')
+    
+        # 重装后数据库有版本数据，但是本地没有则重装
+        if not install_flag \
+                and release_version == self._version \
+                and not Path(f'{self._cf_path}/{self._binary_name}').exists() \
+                and not Path(f'{self._cf_path}/cfst.exe').exists():
+            logger.warn(f"未检测到CloudflareSpeedTest本地版本，重新安装")
+            install_flag = True
+    
+        if not install_flag:
+            logger.info(f"CloudflareSpeedTest无新版本，存在可执行版本，继续运行")
+            return True, None
+    
+        # 检查环境、安装
+        if SystemUtils.is_windows():
+            # windows
+            cf_file_name = 'cfst_windows_amd64.zip'
+            download_url = f'{self._release_prefix}/{release_version}/{cf_file_name}'
+            return self.__os_install(download_url, cf_file_name, release_version,
+                                     f"ditto -V -x -k --sequesterRsrc {self._cf_path}/{cf_file_name} {self._cf_path}")
+        elif SystemUtils.is_macos():
+            # mac
+            uname = SystemUtils.execute('uname -m')
+            arch = 'amd64' if uname == 'x86_64' else 'arm64'
+            cf_file_name = f'cfst_darwin_{arch}.zip'
+            download_url = f'{self._release_prefix}/{release_version}/{cf_file_name}'
+            return self.__os_install(download_url, cf_file_name, release_version,
+                                     f"ditto -V -x -k --sequesterRsrc {self._cf_path}/{cf_file_name} {self._cf_path}")
         else:
-            if SystemUtils.is_windows():
-                self.__get_windows_cfst(download_url, proxies)
-            else:
-                # 确保下载URL中版本号不为None
-                safe_download_url = download_url.replace(f'/{None}/', f'/{release_version}/')
-                os.system(f'wget -P {self._cf_path} https://ghfast.top/{safe_download_url}')
+            # docker
+            uname = SystemUtils.execute('uname -m')
+            arch = 'amd64' if uname == 'x86_64' else 'arm64'
+            cf_file_name = f'cfst_linux_{arch}.tar.gz'
+            download_url = f'{self._release_prefix}/{release_version}/{cf_file_name}'
+            return self.__os_install(download_url, cf_file_name, release_version,
+                                     f"tar -zxf {self._cf_path}/{cf_file_name} -C {self._cf_path}")
 
-    # 其他代码保持不变...
-    # ...
+    def __os_install(self, download_url, cf_file_name, release_version, unzip_command):
+        """
+        macos/docker安装cloudflare
+        """
+        # 手动下载安装包后，无需在此下载
+        if not Path(f'{self._cf_path}/{cf_file_name}').exists():
+            # 首次下载或下载新版压缩包
+            proxies = settings.PROXY
+            https_proxy = proxies.get("https") if proxies and proxies.get("https") else None
+            if https_proxy:
+                if SystemUtils.is_windows():
+                    self.__get_windows_cfst(download_url, proxies)
+                else:
+                    os.system(
+                        f'wget -P {self._cf_path} --no-check-certificate -e use_proxy=yes -e https_proxy={https_proxy} {download_url}')
+            else:
+                if SystemUtils.is_windows():
+                    self.__get_windows_cfst(download_url, proxies)
+                else:
+                    # 确保下载URL中版本号不为None
+                    safe_download_url = download_url.replace(f'/{None}/', f'/{release_version}/')
+                    os.system(f'wget -P {self._cf_path} https://ghfast.top/{safe_download_url}')
+    
+        # 其他代码保持不变...
+        # ...
     
         # 判断是否下载好安装包
         if Path(f'{self._cf_path}/{cf_file_name}').exists():
